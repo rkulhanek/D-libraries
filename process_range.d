@@ -1,7 +1,20 @@
+module process_range;
+
 import std.stdio, std.format, std.range;
 import std.process, std.parallelism;
 import core.sys.posix.signal: SIGTERM;
 
+/* Convenient interface for piping input through a series of processes.  Each
+ * ProcessRange spawns a thread to consume lines from the input range as they
+ * arrive, and is an InputRange itself, so the output can be consumed as such.
+ *
+ * The command is processed through /bin/bash
+ * 
+ * Only stdout is processed; stderr from the forked processes just go straight
+ * through as normal.  
+ * 
+ * If the process terminates abnormally, an exception will be thrown.
+ */
 class ProcessRange(InputRange) if (isInputRange!InputRange) {
 	private:
 	ProcessPipes pipes;

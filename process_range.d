@@ -18,7 +18,7 @@ import core.sys.posix.signal: SIGTERM;
 class ProcessRange(InputRange) if (isInputRange!InputRange) {
 	private:
 	ProcessPipes pipes;
-	File.ByLine!(char, char) outRange;
+	typeof(pipes.stdout.byLineCopy()) outRange;
 
 	public:
 	static void input_thread(T1, T2)(T1 input, T2 output) {
@@ -29,12 +29,22 @@ class ProcessRange(InputRange) if (isInputRange!InputRange) {
 		output.flush();
 		output.close();
 	}
+	
+	this(string command) {
+		//pipeShell is basically this, but with "/bin/sh".
+		//writef("ProcessRange: '%s'\n", command);
+		stdout.flush();
+		pipes = pipeProcess([ "/bin/bash", "-c", command ], Redirect.stdin | Redirect.stdout);
+		outRange = pipes.stdout.byLineCopy();
+	}
 
 	this(InputRange input, string command) {
 		//pipeShell is basically this, but with "/bin/sh".
+		//writef("ProcessRange: '%s'\n", command);
+		stdout.flush();
 		pipes = pipeProcess([ "/bin/bash", "-c", command ], Redirect.stdin | Redirect.stdout);
 		task!input_thread(input, pipes.stdin).executeInNewThread();
-		outRange = pipes.stdout.byLine();
+		outRange = pipes.stdout.byLineCopy();
 	}
 
 	void kill(int signal = SIGTERM) {
@@ -58,7 +68,7 @@ class ProcessRange(InputRange) if (isInputRange!InputRange) {
 		return !r.terminated;	
 	}
 
-	char[] front() { return outRange.front(); }
+	string front() { return outRange.front(); }
 	void popFront() { outRange.popFront(); }
 	bool empty() {
 		isRunning();//just calling this so we get an exception if the proc failed
@@ -74,6 +84,11 @@ auto processRange(InputRange)(InputRange input, string command) {
 	return new ProcessRange!InputRange(input, command);
 }
 
+//No input stream, which means no separate thread. Basically just a wrapper around pipeProcess at this point.
+auto processRange(string command) {
+	return new ProcessRange!(string[])(command);
+}
+
 unittest {
 	import std.array;
 	auto bar = ["a", "b", "c"]
@@ -82,5 +97,7 @@ unittest {
 		.join(" ");
 	assert("FOO BAR BAZ A B C 1 2 3" == bar);
 }
-void main() {}
+version(unittest) {
+	void main() {}
+}
 

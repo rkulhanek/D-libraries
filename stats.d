@@ -16,10 +16,16 @@ real stdev(T)(T[] x) {
 }
 
 real welch_t_test(T)(T[] x1, T[] x2) {
+	real bessel(T)(T[] x) {
+		real n = x.length.to!real;
+		return n / (n - 1.0);
+	}
+
 	auto mean1 = mean(x1);
 	auto mean2 = mean(x2);
-	auto var1 = variance(x1);
-	auto var2 = variance(x2);
+	//prefer unbiased variance, since that should make false positives less likely.
+	auto var1 = variance(x1) * bessel(x1);
+	auto var2 = variance(x2) * bessel(x2);
 	auto n1 = x1.length.to!real;
 	auto n2 = x2.length.to!real;
 

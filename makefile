@@ -1,5 +1,7 @@
 MODULES=$(shell ls *.d)
 
+COMPILER=$(shell which dmd || which ldc2)
+
 librdk.a: $(MODULES)
-	dmd -lib -O $(MODULES) '-of$@'
+	$(COMPILER) -lib -O $(MODULES) '-of$@'
 
